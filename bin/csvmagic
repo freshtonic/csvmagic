@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+csvmagic_dir = File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib'))
+$LOAD_PATH.unshift(csvmagic_dir) unless $LOAD_PATH.include?(csvmagic_dir)
+require 'rubygems'
+require 'csvmagic'
+require 'csvmagic/version'
+exit ::CSVMagic::Command.run
+
