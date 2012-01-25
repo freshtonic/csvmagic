@@ -4,6 +4,14 @@ csvmagic_dir = File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib'))
 $LOAD_PATH.unshift(csvmagic_dir) unless $LOAD_PATH.include?(csvmagic_dir)
 require 'rubygems'
 require 'csvmagic'
+require 'csvmagic/munger'
 require 'csvmagic/version'
-exit ::CSVMagic::Command.run
+begin
+  ::CSVMagic::Command.run
+  exit 0
+rescue
+  STDERR.puts $!.backtrace
+  exit 1
+end
+
 
