@@ -1,5 +1,6 @@
 require 'trollop'
 require 'pry'
+require 'faster_csv'
 
 module CSVMagic
   class Command
@@ -85,8 +86,8 @@ module CSVMagic
 
         opt :headings, 
           
-          Command.nice("Tells CSVMagic what the column names are so you can use the names in
-          your expressions. Not necessary if you use the --header option"), 
+          Command.nice("Tells CSVMagic what the column names are so you can use the 
+          names in your expressions. Not necessary if you use the --header option"), 
           
           :type => String
 
@@ -149,7 +150,6 @@ module CSVMagic
           :type => String, :multi => true
 
       end
-
 
       if opts[:include].count > 0 && opts[:exclude].count > 0
         Trollop::die :exclude, "--exclude cannot be used with --include" 

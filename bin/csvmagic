@@ -10,6 +10,7 @@ begin
   ::CSVMagic::Command.run
   exit 0
 rescue
+  STDERR.puts $!.message
   STDERR.puts $!.backtrace
   exit 1
 end
