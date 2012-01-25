@@ -19,6 +19,9 @@ module CSVMagic
       end
 
       FasterCSV(STDOUT) do |csv|
+        if @opts.headings
+          csv << @headings if @headings
+        end
         @csvs.each_pair do |name,content|
           content.each do |line|
             csv << line
@@ -37,7 +40,7 @@ module CSVMagic
 
     def headings(content)
       if @opts.headings
-        @opts.headings.split(",").map(:to_sym)
+        @opts.headings.split(",").map(&:to_sym)
       elsif @opts.header
         content.shift
         content[0].map(&:to_sym) if content.size > 0
