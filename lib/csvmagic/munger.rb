@@ -1,54 +1,72 @@
 module CSVMagic
+
   class Munger
 
     # opts is Trollop options object
     # extra_args is the remaining command line argumets (files probably)
-    def initialize(opts, extra_args)
+    def initialize(opts, file)
       @opts = opts
-      @files = open_files(extra_args)
+      if file
+        @input = File.open(file, 'r') 
+      else
+        @input = STDIN
+      end
+      @output = STDOUT
     end
 
     def process
-      # consume the CSV file with faster csv (just read it all into memory for
-      # now.
-      @csvs = @files.inject({}) do |hash,f|
-        content = FasterCSV.parse(f)
-        @headings ||= headings(content)
-        hash[File.basename(f.path)] = content
-        hash
+      
+      options = {
+        :headers => :first_row, 
+        :return_headers => false,
+        :row_sep => :auto
+      }
+
+      select = compile_select
+
+      CSV(@output) do |out|
+        CSV.new(@input, options).each do |row|
+          output = row.instance_eval(&select)
+          out << output #.to_csv
+        end
       end
 
-      FasterCSV(STDOUT) do |csv|
-        if @opts.headings
-          csv << @headings if @headings
-        end
-        @csvs.each_pair do |name,content|
-          content.each do |line|
-            csv << line
-          end
-        end
-      end
     end
 
     private
 
-    def open_files(files)
-      @files = files.map do |file|
-        File.open(File.expand_path(".", file))
-      end
+    # Compile the select expression to a lambda that when passed
+    # the row object will return an array with the new row.
+    def compile_select
+      #eval("proc { [#{@opts.expression}] }") 
+      parser = RubyParser.new
+      r2r = Ruby2Ruby.new
+      sexp = parser.process("[#{@opts.expression}]")
+      twiddled_sexp = BindToRowProcessor.new.process(sexp)
+      ruby = r2r.process(twiddled_sexp)
+      eval "proc { #{ruby} }"
     end
-
-    def headings(content)
-      if @opts.headings
-        @opts.headings.split(",").map(&:to_sym)
-      elsif @opts.header
-        content.shift
-        content[0].map(&:to_sym) if content.size > 0
-      else
-        []
-      end
-    end
-
   end
 
+  class BindToRowProcessor < SexpProcessor
+    def initialize
+      super
+    end
+
+    def process_call(exp)
+      call = exp.shift
+      unknown = exp.shift
+      symbol = exp.shift
+      arglist = exp.shift
+      code = <<-RUBY
+        if headers.include?('#{symbol}')
+          self['#{symbol}']
+        else
+          #{symbol}
+        end
+      RUBY
+      new_sexp = RubyParser.new.process(code)
+      new_sexp
+    end
+  end
 end

@@ -2,9 +2,11 @@
 source :rubygems
 
 #gemspec
-gem 'trollop', '1.16.2'
+gem 'trollop'
 gem 'pry'
-gem "sqlite3-ruby", "~> 1.3.3"
+gem "sqlite3-ruby"
+gem "ruby_parser"
+gem "ruby2ruby"
 
 group :test do
   gem 'rspec', '2.6'

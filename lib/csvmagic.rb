@@ -1,11 +1,14 @@
 require 'trollop'
 require 'pry'
-require 'faster_csv'
+require 'csv'
+require 'ruby2ruby'
+require 'ruby_parser'
 
 module CSVMagic
   class Command
     def self.run
       opts = Trollop::options do
+
         version "csvmagic #{CSVMagic::VERSION::STRING} (c) 2012 James Sadler"
         banner <<-EOS
 
@@ -62,7 +65,7 @@ module CSVMagic
           
           :type => String
 
-        opt :select, 
+        opt :expression, 
           
           Command.nice("Comma-seperated list of columns to output. Each item in the list is
           a Ruby expression"), 
@@ -159,7 +162,7 @@ module CSVMagic
         Trollop::die :header, "--header cannot be used with --headings" 
       end
 
-      Munger.new(opts, ARGV).process
+      Munger.new(opts, ARGV[0]).process
 
     end
 
