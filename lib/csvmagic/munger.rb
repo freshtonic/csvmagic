@@ -41,33 +41,35 @@ module CSVMagic
       parser = RubyParser.new
       r2r = Ruby2Ruby.new
       sexp = parser.process("[#{@opts.expression}]")
-      twiddled_sexp = BindToRowProcessor.new.process(sexp)
+      twiddled_sexp = ExpressionCompiler.new.process(sexp)
       ruby = r2r.process(twiddled_sexp)
-      binding.pry
       eval "proc { #{ruby} }"
     end
   end
 
-  class BindToRowProcessor < SexpProcessor
+  class ExpressionCompiler < SexpProcessor
     def initialize
       super
     end
 
     def process_call(exp)
-      binding.pry
       call = exp.shift
       target = exp.shift
       symbol = exp.shift
       arglist = exp.shift
 
-      new_sexp = if target.nil?
+      if target.nil?
         if arglist.size == 1
-          # Try to resolve this as a column name.
-          # If the column does not exist, then execute as Ruby method call.
+          # TODO: compile this statically.
+          # Currently this generates the code that makes the check
+          # on every row we visit. If we defer compilation until we
+          # have the headers, we can bypass the check.
           code = <<-RUBY
             if self.headers.include? '#{symbol}'
+              # resolve the symbol against the row hash
               self['#{symbol}']
             else
+              # Treat as a method call
               #{symbol}
             end
           RUBY
@@ -76,9 +78,11 @@ module CSVMagic
           process s(:call, nil, symbol, arglist)
         end
       elsif target[0] == :call
-        s(:call, process(s(:call, target[1], target[2], target[3])), symbol, arglist) 
+        s(:call, process(target), symbol, arglist) 
       else
-        process s(:call, target, symbol, arglist)
+        # Nothing to do here, anything else we leave as-is.
+        # (the null transformation)
+        s(:call, target, symbol, arglist)
       end
     end
   end
