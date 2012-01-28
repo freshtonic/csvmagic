@@ -33,8 +33,6 @@ module CSVMagic
 
     private
 
-    # Compile the select expression to a lambda that when passed
-    # the row object will return an array with the new row.
     def compile_select(headers)
       parser = RubyParser.new
       r2r = Ruby2Ruby.new
@@ -47,8 +45,16 @@ module CSVMagic
     end
   end
 
-  class ExpressionCompiler < SexpProcessor
-    attr_accessor :headers
+  # Rewites :call sexps so that anything that looks like a variable lookup or
+  # a method with no arguments will be re-written to look-up the value from
+  # a column with that heading name.
+  #
+  # Anything else will be evaluated as a normal Ruby call.
+  #
+  # The 'is this a column heading?' check happens once only and is compiled away
+  # (when we have the headings from the CSV file).
+  #
+  class ExpressionCompiler < SexpProcessor attr_accessor :headers
 
     def initialize
       super
@@ -63,10 +69,6 @@ module CSVMagic
 
       if target.nil?
         if arglist.size == 1
-          # TODO: compile this statically.
-          # Currently this generates the code that makes the check
-          # on every row we visit. If we defer compilation until we
-          # have the headers, we can bypass the check.
           if @headers.include? symbol.to_s 
             @parser.process("self['#{symbol}']")
           else
@@ -78,8 +80,7 @@ module CSVMagic
       elsif target[0] == :call
         s(:call, process(target), symbol, arglist) 
       else
-        # Nothing to do here, anything else we leave as-is.
-        # (the null transformation)
+        # Pass anything else through untouched and don't process any further.
         s(:call, target, symbol, arglist)
       end
     end
