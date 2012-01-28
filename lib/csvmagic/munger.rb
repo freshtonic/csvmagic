@@ -15,18 +15,16 @@ module CSVMagic
     end
 
     def process
-      
       options = {
         :headers => :first_row, 
         :return_headers => false,
         :row_sep => :auto
       }
 
-      select = compile_select
-
       CSV(@output) do |out|
         CSV.new(@input, options).each do |row|
-          output = row.instance_eval(&select)
+          @select ||= compile_select(row.headers)
+          output = row.instance_eval(&@select)
           out << output
         end
       end
@@ -37,19 +35,24 @@ module CSVMagic
 
     # Compile the select expression to a lambda that when passed
     # the row object will return an array with the new row.
-    def compile_select
+    def compile_select(headers)
       parser = RubyParser.new
       r2r = Ruby2Ruby.new
       sexp = parser.process("[#{@opts.expression}]")
-      twiddled_sexp = ExpressionCompiler.new.process(sexp)
+      compiler = ExpressionCompiler.new
+      compiler.headers = headers
+      twiddled_sexp = compiler.process(sexp)
       ruby = r2r.process(twiddled_sexp)
       eval "proc { #{ruby} }"
     end
   end
 
   class ExpressionCompiler < SexpProcessor
+    attr_accessor :headers
+
     def initialize
       super
+      @parser = RubyParser.new
     end
 
     def process_call(exp)
@@ -64,16 +67,11 @@ module CSVMagic
           # Currently this generates the code that makes the check
           # on every row we visit. If we defer compilation until we
           # have the headers, we can bypass the check.
-          code = <<-RUBY
-            if self.headers.include? '#{symbol}'
-              # resolve the symbol against the row hash
-              self['#{symbol}']
-            else
-              # Treat as a method call
-              #{symbol}
-            end
-          RUBY
-          RubyParser.new.process(code)
+          if @headers.include? symbol.to_s 
+            @parser.process("self['#{symbol}']")
+          else
+            @parser.process(symbol.to_s)
+          end
         else
           process s(:call, nil, symbol, arglist)
         end
