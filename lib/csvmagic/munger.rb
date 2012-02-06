@@ -24,7 +24,7 @@ module CSVMagic
 
       CSV(@output) do |out|
         CSV.new(@input, options).each do |row|
-          @select ||= compile_select(row.headers)
+          @select ||= compile_project(row.headers)
           @where  ||= compile_where(row.headers)
           output = row.instance_eval(&@select) if row.instance_eval(&@where)
           out << output if output
@@ -35,7 +35,7 @@ module CSVMagic
 
     private
 
-    def compile_select(headers)
+    def compile_project(headers)
       compile(headers, "[#{@opts.project}]")
     end
 
