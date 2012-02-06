@@ -3,10 +3,6 @@ require 'csvmagic/types'
 
 module CSVMagic
 
-  class CSV::Row
-    include Types # We need the parse_value method in the scope of the evaluated line
-  end
-
   class Munger
 
     def initialize(opts, file)
@@ -113,5 +109,11 @@ module CSVMagic
         h.gsub(/[^a-zA-Z0-0_\!\?]/, "_")
       end
     end
+  end
+
+  class CSV::Row
+    # The user-supplied expressions are evaluated with  an instance of CSV::Row
+    # as self. The following code puts the value parser in the same context.
+    include Types 
   end
 end
