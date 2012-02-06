@@ -9,9 +9,6 @@ module CSVMagic
 
   class Munger
 
-
-
-
     def initialize(opts, file)
       @opts = opts
       @input = if file
@@ -32,8 +29,9 @@ module CSVMagic
       CSV(@output) do |out|
         CSV.new(@input, options).each do |row|
           @select ||= compile_select(row.headers)
-          output = row.instance_eval(&@select)
-          out << output
+          @where  ||= compile_where(row.headers)
+          output = row.instance_eval(&@select) if row.instance_eval(&@where)
+          out << output if output
         end
       end
 
@@ -42,9 +40,17 @@ module CSVMagic
     private
 
     def compile_select(headers)
+      compile(headers, "[#{@opts.project}]")
+    end
+
+    def compile_where(headers)
+      compile(headers, "#{@opts.where || 'true'}")
+    end
+
+    def compile(headers, prog)
       parser = RubyParser.new
       r2r = Ruby2Ruby.new
-      sexp = parser.process("[#{@opts.expression}]")
+      sexp = parser.process(prog)
       compiler = ExpressionCompiler.new
       compiler.headers = headers
       twiddled_sexp = compiler.process(sexp)
