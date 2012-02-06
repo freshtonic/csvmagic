@@ -6,10 +6,10 @@ module CSVMagic
     # extra_args is the remaining command line argumets (files probably)
     def initialize(opts, file)
       @opts = opts
-      if file
-        @input = File.open(file, 'r') 
+      @input = if file
+        File.open(file, 'r') 
       else
-        @input = STDIN
+        STDIN
       end
       @output = STDOUT
     end
@@ -54,11 +54,17 @@ module CSVMagic
   # The 'is this a column heading?' check happens once only and is compiled away
   # (when we have the headings from the CSV file).
   #
-  class ExpressionCompiler < SexpProcessor attr_accessor :headers
+  class ExpressionCompiler < SexpProcessor
+    attr_accessor :headers
 
     def initialize
       super
       @parser = RubyParser.new
+    end
+
+    def headers=(val)
+      @headers = val
+      @cleaned_headers = cleanup_headings
     end
 
     def process_call(exp)
@@ -69,8 +75,9 @@ module CSVMagic
 
       if target.nil?
         if arglist.size == 1
-          if @headers.include? symbol.to_s 
-            @parser.process("self['#{symbol}']")
+          if @cleaned_headers.include? symbol.to_s
+            heading = @headers[@cleaned_headers.index(symbol.to_s)]
+            @parser.process("self['#{heading}']")
           else
             @parser.process(symbol.to_s)
           end
@@ -82,6 +89,14 @@ module CSVMagic
       else
         # Pass anything else through untouched and don't process any further.
         s(:call, target, symbol, arglist)
+      end
+    end
+
+    private
+
+    def cleanup_headings
+      @headers.map do |h|
+        h.gsub(/[^a-zA-Z0-0_\!\?]/, "_")
       end
     end
   end
