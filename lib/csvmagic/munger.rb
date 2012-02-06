@@ -1,9 +1,17 @@
+
+require 'csvmagic/types'
+
 module CSVMagic
+
+  class CSV::Row
+    include Types # We need the parse_value method in the scope of the evaluated line
+  end
 
   class Munger
 
-    # opts is Trollop options object
-    # extra_args is the remaining command line argumets (files probably)
+
+
+
     def initialize(opts, file)
       @opts = opts
       @input = if file
@@ -77,7 +85,7 @@ module CSVMagic
         if arglist.size == 1
           if @cleaned_headers.include? symbol.to_s
             heading = @headers[@cleaned_headers.index(symbol.to_s)]
-            @parser.process("self['#{heading}']")
+            @parser.process("parse_value(self['#{heading}'])")
           else
             @parser.process(symbol.to_s)
           end
