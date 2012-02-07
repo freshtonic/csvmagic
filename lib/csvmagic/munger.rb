@@ -92,13 +92,16 @@ module CSVMagic
             @parser.process(symbol.to_s)
           end
         else
-          process s(:call, nil, symbol, arglist)
+          s(:call, 
+            nil, 
+            symbol.is_a?(Sexp) ? process(symbol) : symbol, 
+            arglist.is_a?(Sexp) ? process(arglist) : arglist)
         end
-      elsif target[0] == :call
-        s(:call, process(target), symbol, arglist) 
       else
-        # Pass anything else through untouched and don't process any further.
-        s(:call, target, symbol, arglist)
+        s(:call, 
+          target.is_a?(Sexp) ? process(target) : target,
+          symbol.is_a?(Sexp) ? process(symbol) : symbol,
+          arglist.is_a?(Sexp) ? process(arglist) : arglist)
       end
     end
 
