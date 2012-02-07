@@ -109,7 +109,7 @@ module CSVMagic
 
     def cleanup_headings
       @headers.map do |h|
-        h.gsub(/[^a-zA-Z0-0_\!\?]/, "_")
+        h.downcase.strip.gsub(/[^a-z0-9_\!\?]/, "_")
       end
     end
   end
